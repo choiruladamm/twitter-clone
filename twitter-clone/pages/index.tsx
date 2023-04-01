@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Inter } from "next/font/google";
 import styles from "@/styles/Home.module.css";
 import { Client, Databases, Account } from "appwrite";
@@ -10,17 +10,34 @@ const inter = Inter({ subsets: ["latin"] });
 export default function Home({ tweets }) {
   console.log(tweets);
 
+  // state for user
+  const [user, setUser] = useState(null);
+
   // run once when component mount
   useEffect(() => {
     const client = new Client();
-
     const account = new Account(client);
+
+    client
+      .setEndpoint(process.env.NEXT_PUBLIC_ENDPOINT)
+      .setProject(process.env.NEXT_PUBLIC_PROJECT);
+
+    const promise = account.get();
+
+    promise.then(
+      function (response) {
+        console.log(response); // succes
+        setUser(response.$id);
+      },
+      function (error) {
+        console.log(error); // failure
+      }
+    );
   }, []);
 
   // function async create user signup for Appwrite
   const createUser = async () => {
     const client = new Client();
-
     const account = new Account(client);
 
     client
@@ -42,7 +59,6 @@ export default function Home({ tweets }) {
   // function async create user login for Appwrite
   const userLogin = async () => {
     const client = new Client();
-
     const account = new Account(client);
 
     client
@@ -54,6 +70,58 @@ export default function Home({ tweets }) {
     response.then(
       function (response) {
         console.log(response); // succes
+        setUser(response.userId);
+      },
+      function (error) {
+        console.log(error); // failure
+      }
+    );
+  };
+
+  // function async create user logout for Appwrite
+  const logoutSessions = async () => {
+    const client = new Client();
+    const account = new Account(client);
+
+    client
+      .setEndpoint(process.env.NEXT_PUBLIC_ENDPOINT)
+      .setProject(process.env.NEXT_PUBLIC_PROJECT);
+
+    const response = account.deleteSessions();
+
+    response.then(
+      function (response) {
+        console.log(response); // succes
+        setUser("");
+      },
+      function (error) {
+        console.log(error); // failure
+      }
+    );
+  };
+
+  // function async create tweet for Appwrite
+  const createTweet = async () => {
+    const client = new Client();
+    const databases = new Databases(client);
+
+    client
+      .setEndpoint(process.env.NEXT_PUBLIC_ENDPOINT)
+      .setProject(process.env.NEXT_PUBLIC_PROJECT);
+
+    const response = databases.createDocument(
+      process.env.NEXT_PUBLIC_DATABASE,
+      process.env.NEXT_PUBLIC_TWEETS_COLLECTION,
+      "uniqueID",
+      {
+        text: "Hello World",
+      }
+    );
+
+    response.then(
+      function (response) {
+        console.log(response); // succes
+        setUser("");
       },
       function (error) {
         console.log(error); // failure
@@ -72,7 +140,23 @@ export default function Home({ tweets }) {
       <main>
         <div style={{ padding: 30 }}>
           <button onClick={createUser}>Create User</button>
-          <button onClick={userLogin}>Create User via Email</button>
+          <br />
+          <button onClick={userLogin}>Login User</button>
+          <br />
+          <button onClick={createTweet}>Create Tweet</button>
+          <br />
+          {user && <div>Hello {user}</div>}
+          <br />
+          <button onClick={logoutSessions}>Logout</button>
+          <div>
+            <h2>Tweets</h2>
+            {tweets.documents.map((tweet) => (
+              <div key={tweet.$id}>
+                <h3>{tweet.text}</h3>
+                <p>{tweet.createdAt}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
     </>
